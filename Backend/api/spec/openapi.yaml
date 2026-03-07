@@ -1,0 +1,10 @@
+openapi: 3.0.0
+info:
+  title: anticloud
+  description: anticloud
+  version: 0.0.1
+servers:
+  - url: '/api'
+paths:
+  /ls:
+    $ref: "paths/ls.yml"

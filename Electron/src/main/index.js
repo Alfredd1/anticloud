@@ -102,6 +102,14 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+ipcMain.handle("get-devices", async () => {
+  return new Promise((resolve, reject) => {
+    exec("tailscale status --json", (err, stdout) => {
+      if (err) reject(err);
+      else resolve(stdout);
+    });
+  });
+});
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
