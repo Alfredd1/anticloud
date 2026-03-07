@@ -3,5 +3,5 @@ package persistence
 import "Backend/model"
 
 type FileRepository interface {
-	GetFiles() ([]model.File, error)
+	GetFiles(path string) ([]model.File, error)
 }

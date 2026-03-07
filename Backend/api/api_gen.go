@@ -198,7 +198,7 @@ type LsResponseObject interface {
 type Ls200JSONResponse struct {
 	Files *[]struct {
 		// IsDirectory Indicates whether the file is a directory.
-		IsDirectory *bool `json:"isDirectory,omitempty"`
+		IsDirectory bool `json:"isDirectory"`
 
 		// Name Name of the file.
 		Name string `json:"name"`
@@ -285,13 +285,13 @@ func (sh *strictHandler) Ls(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/6RSwW7bMAz9FYHbMbC97abjMAwoUOyyYxAUis3ULGxJI+kNbqB/HySnaRM3l+0km3rv",
-	"kXqPR2jDGINHrwL2CNL2OLry+XrxcKo+fKcB81XkEJGVsABJvhFjq4Hn/NuhtExRKXiwcOc7ap2imD89",
-	"ao9stEdzoAENiXGme6FWsAGdI4KFfQgDOg9pA96NuBb94UY04XCWesMVZfKPmSr0/A71Jz1fUA15s58V",
-	"5Y0GecVHZEhpA4y/JmLswG6XYU7CuzM67J+w1dzxhmP3JFp8UhyLYR8ZD2DhQ/1KqE+E+pbr6dzPMbsZ",
-	"Uh6O/CGsn+i8UjuEqcsvIh3wqvYbWRZkUzXVpywdInoXCSx8qZqqgQ1Ep30Zth7KEcPyiBy8y43uOrBw",
-	"L7BYhKJfQzcve+MVfQG7GIecPgVfP0lu+bJh6y3KDfN5leNVBAW19v4SpjxhKUgMXhb5z03zH8PlTfnX",
-	"6Er8Kb0782VwBSXYTkw6g93u0lLgnBjY7REmHsBCnaNKu/Q3AAD//wvMWqO9AwAA",
+	"H4sIAAAAAAAC/6RSTW/bMAz9KwK3o2F7203HYRhQoNhlxyAoFJupWdiSRtIb3ED/fZCcpk3SXLaTE+q9",
+	"x4/3DtCFKQaPXgXsAaQbcHLl5+vDw7H68J1GzE+RQ0RWwgIk+UaMnQZe8t8epWOKSsGDhTvfU+cUxfwZ",
+	"UAdkowOaPY1oSIwz/Qu1hgp0iQgWdiGM6DykCryb8Fr0h5vQhP1J6g1XlMk/ZqrQ8zvUn/R8RjXkzW5R",
+	"lDca5BUfkSGlChh/zcTYg92swxyFq7O1tydu2D1hp7n/jfvdk2i5muJUzveRcQ8WPjSvhOZIaG55kE79",
+	"HLNbIOVRye/D9cLOK3VjmPu8H+mIF7XfyLIi27qtP2XpENG7SGDhS93WLVQQnQ5l2GYsnxjWJXIMXG50",
+	"14OFe4H1YCj6NfTLmiKv6AvYxTjmLFDwzZPkli95u85Ubpi/F65eGFJQ17c/hynPWAoSg5dV/nPb/sdw",
+	"OTf/al2xP6V3Zz43rqAEu5lJF7CbbVoLnB0DuznAzCNYaLJVaZv+BgAA//+DVg7TywMAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

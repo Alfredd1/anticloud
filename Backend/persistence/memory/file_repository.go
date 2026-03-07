@@ -12,8 +12,8 @@ type FileRepository struct {
 func NewFileRepository() *FileRepository {
 	return &FileRepository{}
 }
-func (r *FileRepository) GetFiles() ([]model.File, error) {
-	entries, err := os.ReadDir("./persistence/memory/root")
+func (r *FileRepository) GetFiles(path string) ([]model.File, error) {
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
 	}

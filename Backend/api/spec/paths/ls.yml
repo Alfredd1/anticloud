@@ -1,0 +1,25 @@
+post:
+  summary: ""
+  operationId: ls
+  security: [ ]
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            path:
+              type: string
+          required:
+            - path
+  responses:
+    '200':
+      description: ""
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              files:
+                 $ref: "../components/schemas/FileList.yml"
