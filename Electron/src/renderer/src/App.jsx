@@ -1,4 +1,4 @@
-
+import TreeView from "./components/TreeViewer"
 
 function App() {
   const ipcHandle = () => window.electron.ipcRenderer.send('ping')
@@ -6,7 +6,7 @@ function App() {
   return (
     <>
     <div>
-      <p className='font-medium'>Hello world</p>
+      <TreeView/>
     </div>
     </>
   )
