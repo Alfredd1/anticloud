@@ -5,7 +5,7 @@ function TreeView(){
 
     useEffect(() => {
         // Include api location 
-        fetch("...")
+        fetch("https://localhost:3000/api/ls")
         .then(response => response.json())
         .then(data => {
             setData(data);

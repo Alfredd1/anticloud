@@ -1,4 +1,4 @@
-import TreeView from "./components/TreeViewer"
+import GetIps from "./components/GetIps"
 
 function App() {
   const ipcHandle = () => window.electron.ipcRenderer.send('ping')
@@ -6,7 +6,7 @@ function App() {
   return (
     <>
     <div>
-      <TreeView/>
+      <GetIps/>
     </div>
     </>
   )
