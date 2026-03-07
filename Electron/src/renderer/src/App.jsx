@@ -5,9 +5,9 @@ function App() {
 
   return (
     <>
-    <div>
-      <p className='font-medium'>Hello world</p>
-    </div>
+      <div>
+        <p className='font-medium'>Hello world</p>
+      </div>
     </>
   )
 }
