@@ -1,9 +1,8 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, net } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import {exec} from 'child_process'
-import {ipcMain} from 'electron'
+import {$key} from ".env"
 
 function createWindow() {
   // Create the browser window.
@@ -15,7 +14,8 @@ function createWindow() {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      contextIsolation: true
     }
   })
 
@@ -53,6 +53,37 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.handle('get-tailscale-devices', () => {
+    return new Promise((resolve, reject) => {
+      const tailnet = '-' // Use your tailnet name or '-' for default
+      const apiKey = "";//ENTER KEY ;)
+      const request = net.request({
+        method: 'GET',
+        protocol: 'https:',
+        hostname: 'api.tailscale.com',
+        path: `/api/v2/tailnet/${tailnet}/devices`
+      })
+
+      request.setHeader('Authorization', `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`)
+
+      request.on('response', (response) => {
+        let body = ''
+        response.on('data', (chunk) => {
+          body += chunk.toString()
+        })
+        response.on('end', () => {
+          try {
+            resolve(JSON.parse(body))
+          } catch (e) {
+            reject(e)
+          }
+        })
+      })
+      request.on('error', (error) => reject(error))
+      request.end()
+    })
+  })
 
   createWindow()
 

@@ -1,13 +1,13 @@
-
+import GetIps from "./components/GetIps"
 
 function App() {
   const ipcHandle = () => window.electron.ipcRenderer.send('ping')
 
   return (
     <>
-      <div>
-        <p className='font-medium'>Hello world</p>
-      </div>
+    <div>
+      <GetIps/>
+    </div>
     </>
   )
 }
