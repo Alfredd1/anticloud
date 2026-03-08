@@ -5,6 +5,8 @@ package api
 import (
 	"Backend/service/file"
 	"context"
+	"os"
+	"strconv"
 )
 
 type Server struct {
@@ -41,4 +43,13 @@ func (s Server) Ls(ctx context.Context, request LsRequestObject) (LsResponseObje
 	return Ls200JSONResponse{
 		Files: &fileStructSlice,
 	}, nil
+}
+
+func (s Server) Size(ctx context.Context, request SizeRequestObject) (SizeResponseObject, error) {
+	c := os.Getenv("POOL_CAP")
+	size, err := strconv.Atoi(c)
+	if err != nil {
+		return Size200JSONResponse{Size: 0}, err
+	}
+	return Size200JSONResponse{Size: size}, nil
 }

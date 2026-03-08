@@ -6,12 +6,31 @@ import (
 	"Backend/service/file"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 )
 
+func init() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("error loading .env file", err.Error())
+	}
+}
+
 func main() {
+
+	c := os.Getenv("POOL_CAP")
+	size, err := strconv.Atoi(c)
+	if err != nil {
+		log.Fatal("error parsing pool capacity", err.Error())
+	}
+	if size < 1 {
+		log.Fatal("server pool capacity must be greater than 1")
+	}
 
 	fileRepository := memory.NewFileRepository()
 	fileService := file.NewService(fileRepository)

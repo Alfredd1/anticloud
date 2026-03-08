@@ -33,6 +33,9 @@ type ServerInterface interface {
 
 	// (POST /ls)
 	Ls(w http.ResponseWriter, r *http.Request)
+
+	// (GET /size)
+	Size(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -41,6 +44,11 @@ type Unimplemented struct{}
 
 // (POST /ls)
 func (_ Unimplemented) Ls(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /size)
+func (_ Unimplemented) Size(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58,6 +66,20 @@ func (siw *ServerInterfaceWrapper) Ls(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Ls(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Size operation middleware
+func (siw *ServerInterfaceWrapper) Size(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Size(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -183,6 +205,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ls", wrapper.Ls)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/size", wrapper.Size)
+	})
 
 	return r
 }
@@ -215,11 +240,32 @@ func (response Ls200JSONResponse) VisitLsResponse(w http.ResponseWriter) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SizeRequestObject struct {
+}
+
+type SizeResponseObject interface {
+	VisitSizeResponse(w http.ResponseWriter) error
+}
+
+type Size200JSONResponse struct {
+	Size int `json:"size"`
+}
+
+func (response Size200JSONResponse) VisitSizeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
 	// (POST /ls)
 	Ls(ctx context.Context, request LsRequestObject) (LsResponseObject, error)
+
+	// (GET /size)
+	Size(ctx context.Context, request SizeRequestObject) (SizeResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
@@ -282,16 +328,41 @@ func (sh *strictHandler) Ls(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Size operation middleware
+func (sh *strictHandler) Size(w http.ResponseWriter, r *http.Request) {
+	var request SizeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Size(ctx, request.(SizeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Size")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SizeResponseObject); ok {
+		if err := validResponse.VisitSizeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/6RSTW/bMAz9KwK3o2F7203HYRhQoNhlxyAoFJupWdiSRtIb3ED/fZCcpk3SXLaTE+q9",
-	"x4/3DtCFKQaPXgXsAaQbcHLl5+vDw7H68J1GzE+RQ0RWwgIk+UaMnQZe8t8epWOKSsGDhTvfU+cUxfwZ",
-	"UAdkowOaPY1oSIwz/Qu1hgp0iQgWdiGM6DykCryb8Fr0h5vQhP1J6g1XlMk/ZqrQ8zvUn/R8RjXkzW5R",
-	"lDca5BUfkSGlChh/zcTYg92swxyFq7O1tydu2D1hp7n/jfvdk2i5muJUzveRcQ8WPjSvhOZIaG55kE79",
-	"HLNbIOVRye/D9cLOK3VjmPu8H+mIF7XfyLIi27qtP2XpENG7SGDhS93WLVQQnQ5l2GYsnxjWJXIMXG50",
-	"14OFe4H1YCj6NfTLmiKv6AvYxTjmLFDwzZPkli95u85Ubpi/F65eGFJQ17c/hynPWAoSg5dV/nPb/sdw",
-	"OTf/al2xP6V3Zz43rqAEu5lJF7CbbVoLnB0DuznAzCNYaLJVaZv+BgAA//+DVg7TywMAAA==",
+	"H4sIAAAAAAAC/6xTTWvcMBD9K2bao7Hd9qZjKYVA6CXHZQlae3Y9wZbU0bjFWfTfy8i7m+xHKKQ9yRq9",
+	"N1/veQ+tH4N36CSC2UNsexxt/nx5eDxEH7/TgPoU2AdkIcxAit+IsRXPs147jC1TEPIODNy5jlorGIvf",
+	"PUqPXEiPxZYGLCgWtuiO1ApKkDkgGNh4P6B1kEpwdsTrpD/siIXfnlK94kZhcjulRnq+QX2g5zNqQa7Y",
+	"zILxVQ5ygjtkSKkExp8TMXZgVkszh8Tl2djrE9dvnrAVrf/G/u4pSt6a4JjX95FxCwY+1C+E+kCo39Ig",
+	"nepZZjtD0lbJbf31wNYJtYOfOp2PZMCL2C/kuCCbqqk+aWof0NlAYOBL1VQNlBCs9LnZeshH8MsQagOr",
+	"he46MHAfYVkYRvnqu3lxkRN0GWxDGNQL5F39FLXk0W/XntKCel6oeiFIRl3v/hwmPGEOxOBdXNJ/bpp/",
+	"aE59817psvwp3ez5XLiMithOTDKDWa31Xh9dvcMbAjwszvyPox7L/eXPyLD1+4bKAVYbglntYeIBDNTq",
+	"v7ROfwIAAP//GW47AqAEAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
