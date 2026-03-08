@@ -28,8 +28,8 @@ func main() {
 	if err != nil {
 		log.Fatal("error parsing pool capacity", err.Error())
 	}
-	if size > 1 {
-		log.Fatal("server pool capacity must be 1 for this implementation")
+	if size < 1 {
+		log.Fatal("server pool capacity must be greater than 1")
 	}
 
 	fileRepository := memory.NewFileRepository()
