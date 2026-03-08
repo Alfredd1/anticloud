@@ -6,9 +6,6 @@ properties:
   size:
     type: integer
     description: Size of the file in bytes.
-#  path:
-#    type: string
-#    description: Path where the file can be accessed.
   isDirectory:
     type: boolean
     description: Indicates whether the file is a directory.
@@ -16,4 +13,3 @@ required:
   - name
   - size
   - isDirectory
-#  - path

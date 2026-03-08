@@ -4,6 +4,7 @@ package api
 
 import (
 	"Backend/service/file"
+	"Backend/service/pool"
 	"context"
 	"os"
 	"strconv"
@@ -11,11 +12,13 @@ import (
 
 type Server struct {
 	fileService file.Service
+	pollService pool.Service
 }
 
-func NewServer(fs file.Service) *Server {
+func NewServer(fs file.Service, ps pool.Service) *Server {
 	return &Server{
 		fileService: fs,
+		pollService: ps,
 	}
 }
 
@@ -41,7 +44,7 @@ func (s Server) Ls(ctx context.Context, request LsRequestObject) (LsResponseObje
 	}
 
 	return Ls200JSONResponse{
-		Files: &fileStructSlice,
+		Files: fileStructSlice,
 	}, nil
 }
 
@@ -52,4 +55,12 @@ func (s Server) Size(ctx context.Context, request SizeRequestObject) (SizeRespon
 		return Size200JSONResponse{Size: 0}, err
 	}
 	return Size200JSONResponse{Size: size}, nil
+}
+
+func (s Server) Free(ctx context.Context, request FreeRequestObject) (FreeResponseObject, error) {
+	freeSpace, err := s.pollService.CalculateFreeSpace()
+	if err != nil {
+		return nil, err
+	}
+	return Free200JSONResponse{Free: freeSpace}, err
 }

@@ -1,7 +1,7 @@
 post:
   summary: ""
   operationId: ls
-  security: []
+  security: [ ]
   requestBody:
     required: true
     content:
@@ -23,3 +23,5 @@ post:
             properties:
               files:
                 $ref: "../components/schemas/FileList.yml"
+            required:
+              - files

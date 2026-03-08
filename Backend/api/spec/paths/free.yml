@@ -1,7 +1,7 @@
 get:
   summary: ""
-  operationId: size
-  security: [ ]
+  operationId: free
+  security: []
   responses:
     "200":
       description: ""
@@ -10,7 +10,7 @@ get:
           schema:
             type: object
             properties:
-              size:
-                type: integer
+              free:
+                type: number
             required:
-              - size
+              - free

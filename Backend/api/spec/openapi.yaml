@@ -10,3 +10,7 @@ paths:
     $ref: "paths/ls.yml"
   /size:
     $ref: "paths/size.yml"
+  /free:
+    $ref: "paths/free.yml"
+#  /store:
+#    $ref: "paths/store.yml"

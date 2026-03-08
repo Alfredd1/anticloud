@@ -31,6 +31,9 @@ type LsJSONRequestBody LsJSONBody
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (GET /free)
+	Free(w http.ResponseWriter, r *http.Request)
+
 	// (POST /ls)
 	Ls(w http.ResponseWriter, r *http.Request)
 
@@ -41,6 +44,11 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// (GET /free)
+func (_ Unimplemented) Free(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // (POST /ls)
 func (_ Unimplemented) Ls(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +68,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// Free operation middleware
+func (siw *ServerInterfaceWrapper) Free(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Free(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // Ls operation middleware
 func (siw *ServerInterfaceWrapper) Ls(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +225,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/free", wrapper.Free)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ls", wrapper.Ls)
 	})
 	r.Group(func(r chi.Router) {
@@ -210,6 +235,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
+}
+
+type FreeRequestObject struct {
+}
+
+type FreeResponseObject interface {
+	VisitFreeResponse(w http.ResponseWriter) error
+}
+
+type Free200JSONResponse struct {
+	Free float32 `json:"free"`
+}
+
+func (response Free200JSONResponse) VisitFreeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type LsRequestObject struct {
@@ -221,7 +264,7 @@ type LsResponseObject interface {
 }
 
 type Ls200JSONResponse struct {
-	Files *[]struct {
+	Files []struct {
 		// IsDirectory Indicates whether the file is a directory.
 		IsDirectory bool `json:"isDirectory"`
 
@@ -230,7 +273,7 @@ type Ls200JSONResponse struct {
 
 		// Size Size of the file in bytes.
 		Size int `json:"size"`
-	} `json:"files,omitempty"`
+	} `json:"files"`
 }
 
 func (response Ls200JSONResponse) VisitLsResponse(w http.ResponseWriter) error {
@@ -260,6 +303,9 @@ func (response Size200JSONResponse) VisitSizeResponse(w http.ResponseWriter) err
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+
+	// (GET /free)
+	Free(ctx context.Context, request FreeRequestObject) (FreeResponseObject, error)
 
 	// (POST /ls)
 	Ls(ctx context.Context, request LsRequestObject) (LsResponseObject, error)
@@ -295,6 +341,30 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// Free operation middleware
+func (sh *strictHandler) Free(w http.ResponseWriter, r *http.Request) {
+	var request FreeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Free(ctx, request.(FreeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Free")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FreeResponseObject); ok {
+		if err := validResponse.VisitFreeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Ls operation middleware
@@ -355,14 +425,14 @@ func (sh *strictHandler) Size(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/6xTTWvcMBD9K2bao7Hd9qZjKYVA6CXHZQlae3Y9wZbU0bjFWfTfy8i7m+xHKKQ9yRq9",
-	"N1/veQ+tH4N36CSC2UNsexxt/nx5eDxEH7/TgPoU2AdkIcxAit+IsRXPs147jC1TEPIODNy5jlorGIvf",
-	"PUqPXEiPxZYGLCgWtuiO1ApKkDkgGNh4P6B1kEpwdsTrpD/siIXfnlK94kZhcjulRnq+QX2g5zNqQa7Y",
-	"zILxVQ5ygjtkSKkExp8TMXZgVkszh8Tl2djrE9dvnrAVrf/G/u4pSt6a4JjX95FxCwY+1C+E+kCo39Ig",
-	"nepZZjtD0lbJbf31wNYJtYOfOp2PZMCL2C/kuCCbqqk+aWof0NlAYOBL1VQNlBCs9LnZeshH8MsQagOr",
-	"he46MHAfYVkYRvnqu3lxkRN0GWxDGNQL5F39FLXk0W/XntKCel6oeiFIRl3v/hwmPGEOxOBdXNJ/bpp/",
-	"aE59817psvwp3ez5XLiMithOTDKDWa31Xh9dvcMbAjwszvyPox7L/eXPyLD1+4bKAVYbglntYeIBDNTq",
-	"v7ROfwIAAP//GW47AqAEAAA=",
+	"H4sIAAAAAAAC/6xUTY+bMBD9K2jaIwLa3nysqpVWWvWyxyhaOTCEWYHtjodWbMR/r2xCPhZWldLcgj1v",
+	"nt+bNzlAaTtnDRrxoA7gywY7HX+eL16Opy8P1GK4cmwdshDGQvI/iLEUy0P4rNCXTE7IGlDwaCoqtaBP",
+	"/jQoDXIiDSY1tZiQT3RSzdAMUpDBISjYWduiNjCmYHSHy6Y/dYeJrU+tLrBemMw+QD29rUCf6e0KmpBJ",
+	"doOgv+hBRnCPDOOYAuOvnhgrUJvpMcfG6ZXs7Qlrd69YSuD/wL8n8hJdE+yifZ8Za1DwKT8D8iMg/2gG",
+	"44lPM+sBxvBUMrVdCtZGqGxtXwV9JC2+O/uN7KfKIiuyL6G1dWi0I1DwLSuyAlJwWpr42LxmjK7uMaoI",
+	"OdCB6bECBQ/hMnjmnTV+SsfXopjSZARNxGjn2pAJsiZ/9YF6zt0yWzPdUa3pu93KYGLVcgah7NqMiPRY",
+	"9kwygNpsw3feRipn/YqkJw8TF3r5bqvhP7QEEy+0zEl9pyVWrWs5lwn3ON7XaGrx1jjGSC9mEhvePpR5",
+	"fVeD9jyt4B31z3T/+AuIZTeKigcc9g3U5gA9t6AgD4s2bse/AQAA///FHb+piQUAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

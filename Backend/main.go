@@ -4,6 +4,7 @@ import (
 	"Backend/api"
 	"Backend/persistence/memory"
 	"Backend/service/file"
+	"Backend/service/pool"
 	"log"
 	"net/http"
 	"os"
@@ -34,8 +35,9 @@ func main() {
 
 	fileRepository := memory.NewFileRepository()
 	fileService := file.NewService(fileRepository)
+	poolService := pool.NewService()
 
-	server := api.NewServer(*fileService)
+	server := api.NewServer(*fileService, *poolService)
 
 	router := chi.NewMux()
 	router.Use(middleware.Logger)
