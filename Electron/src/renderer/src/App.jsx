@@ -1,4 +1,4 @@
-import GetIps from "./components/GetIps"
+import GetDeviceList from "./components/GetDeviceList.jsx";
 
 function App() {
   const ipcHandle = () => window.electron.ipcRenderer.send('ping')
@@ -6,7 +6,7 @@ function App() {
   return (
     <>
     <div>
-      <GetIps/>
+      <GetDeviceList />
     </div>
     </>
   )

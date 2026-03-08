@@ -4,7 +4,7 @@ function TreeView(){
     const [data, setData] = useState(null);
 
     useEffect(() => {
-        // Include api location 
+        // Include api location
         fetch("https://localhost:3000/api/ls")
         .then(response => response.json())
         .then(data => {
@@ -18,7 +18,7 @@ function TreeView(){
     if (!data) {
         return <div>Loading...</div>;
     }
-
+e
     const folders = data.filter(item => item.type === 'folder');
     const files = data.filter(item => item.type === 'file');
     const sortedData = [...folders, ...files];
