@@ -1,5 +1,6 @@
-import DeviceIps from './components/Tailscale/DeviceIps'
-import DeviceStatus from './components/Tailscale/DeviceStatus'
+// import DeviceIps from './components/Tailscale/DeviceIps'
+// import DeviceStatus from './components/Tailscale/DeviceStatus'
+import TreeView from "./components/TreeViewer"
 
 function App() {
   const ipcHandle = () => window.electron.ipcRenderer.send('ping')
@@ -7,11 +8,7 @@ function App() {
   return (
     <>
       <div>
-        <DeviceIps />
-      </div>
-
-      <div>
-        <DeviceStatus />
+        <TreeView/>
       </div>
     </>
   )

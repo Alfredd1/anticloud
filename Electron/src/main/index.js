@@ -8,18 +8,26 @@ import fg from 'fast-glob'
 
 async function startP2PServer() {
   const appContext = express()
+  appContext.use(express.json())
   const P2P_Port = 3500
 
   // Endpoint for other peers to get this computer's files
-  appContext.get('/api/local-files', async (req, res) => {
+  appContext.post('/api/local-files', async (req, res) => {
     try {
-      const entries = await fg(['C:/Users/Public/**/*'], { onlyFiles: true })
+      const searchPath = req.body.path || 'C:/Thing/Root'
+      const pattern = `${searchPath.replace(/\\/g, '/').replace(/\/$/, '')}/**/*`
+      const entries = await fg([pattern], { onlyFiles: false, objectMode: true, suppressErrors: true })
+
       res.json({
         computer: require('os').hostname(),
-        files: entries
+        files: entries.map((entry) => ({
+          name: entry.name,
+          isDirectory: entry.dirent.isDirectory()
+        }))
       })
     } catch (e) {
-      res.status(500).send('Error scanning files')
+      console.error(e)
+      res.status(500).json({ error: 'Error scanning files', details: e.message })
     }
   })
 
@@ -159,6 +167,40 @@ app.whenReady().then(() => {
         })
       })
       request.on('error', (error) => reject(error))
+      request.end()
+    })
+  })
+
+  ipcMain.handle('get-files-from-peer', (event, { ip, path }) => {
+    return new Promise((resolve, reject) => {
+      const request = net.request({
+        method: 'POST',
+        protocol: 'http:',
+        hostname: ip,
+        port: 3000,
+        path: '/api/ls'
+        port: 3500,
+        path: '/api/local-files'
+      })
+
+      request.setHeader('Content-Type', 'application/json')
+
+      request.on('response', (response) => {
+        let body = ''
+        response.on('data', (chunk) => {
+          body += chunk.toString()
+        })
+        response.on('end', () => {
+          try {
+            resolve(JSON.parse(body))
+          } catch (e) {
+            console.error(`Error parsing JSON from peer ${ip}:`, e)
+            resolve({ files: [] })
+          }
+        })
+      })
+      request.on('error', (error) => reject(error))
+      request.write(JSON.stringify({ path }))
       request.end()
     })
   })

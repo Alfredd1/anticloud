@@ -4,7 +4,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   getTailscaleDevices: () => ipcRenderer.invoke('get-tailscale-devices'),
-  getTailscaleStatus: () => ipcRenderer.invoke('get-tailscale-status')
+  getTailscaleStatus: () => ipcRenderer.invoke('get-tailscale-status'),
+  getFilesFromPeer: (ip, path) => ipcRenderer.invoke('get-files-from-peer', { ip, path })
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
