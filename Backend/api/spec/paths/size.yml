@@ -1,0 +1,15 @@
+get:
+  summary: ""
+  operationId: size
+  security: [ ]
+  responses:
+    "200":
+      description: ""
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              size:
+                type: integer
+                required: true

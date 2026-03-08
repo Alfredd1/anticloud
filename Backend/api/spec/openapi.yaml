@@ -4,7 +4,9 @@ info:
   description: anticloud
   version: 0.0.1
 servers:
-  - url: '/api'
+  - url: "/api"
 paths:
   /ls:
     $ref: "paths/ls.yml"
+  /size:
+    $ref: "paths/size.yml"

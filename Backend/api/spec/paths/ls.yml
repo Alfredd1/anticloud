@@ -1,7 +1,7 @@
 post:
   summary: ""
   operationId: ls
-  security: [ ]
+  security: []
   requestBody:
     required: true
     content:
@@ -14,7 +14,7 @@ post:
           required:
             - path
   responses:
-    '200':
+    "200":
       description: ""
       content:
         application/json:
@@ -22,4 +22,4 @@ post:
             type: object
             properties:
               files:
-                 $ref: "../components/schemas/FileList.yml"
+                $ref: "../components/schemas/FileList.yml"
