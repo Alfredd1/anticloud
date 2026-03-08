@@ -2,7 +2,6 @@ import { app, shell, BrowserWindow, ipcMain, net } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import {$key} from ".env"
 
 function createWindow() {
   // Create the browser window.
@@ -57,7 +56,7 @@ app.whenReady().then(() => {
   ipcMain.handle('get-tailscale-devices', () => {
     return new Promise((resolve, reject) => {
       const tailnet = '-' // Use your tailnet name or '-' for default
-      const apiKey = "";//ENTER KEY ;)
+      const apiKey = "tskey-api-kMuqUf38td11CNTRL-Vio2AVU7QSY2aY6LKhMaSYNC655cZ42L";//ENTER KEY ;)
       const request = net.request({
         method: 'GET',
         protocol: 'https:',
