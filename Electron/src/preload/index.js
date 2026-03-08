@@ -3,7 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  getTailscaleDevices: () => ipcRenderer.invoke('get-tailscale-devices')
+  getTailscaleDevices: () => ipcRenderer.invoke('get-tailscale-devices'),
+  getTailscaleStatus: () => ipcRenderer.invoke('get-tailscale-status')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

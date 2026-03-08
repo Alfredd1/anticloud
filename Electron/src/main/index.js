@@ -2,55 +2,43 @@ import { app, shell, BrowserWindow, ipcMain, net } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import express from "express"
-import { execSync } from "child_process"
-import fg from "fast-glob"
+import express from 'express'
+import { exec } from 'child_process'
+import fg from 'fast-glob'
 
-const appContext = express()
-const P2P_Port = 3500;
+async function startP2PServer() {
+  const appContext = express()
+  const P2P_Port = 3500
 
-function getMyTailscaleIP() {
-  try {
-    const status = JSON.parse(execSync("tailscale status --json")).toString();
-    return status.Self.TailscaleIP[0] //Gets the IPv4 addresss
-  }
-  catch (e) {
-    console.error("Tailscale not running");
-    return null;
-  }
+  // Endpoint for other peers to get this computer's files
+  appContext.get('/api/local-files', async (req, res) => {
+    try {
+      const entries = await fg(['C:/Users/Public/**/*'], { onlyFiles: true })
+      res.json({
+        computer: require('os').hostname(),
+        files: entries
+      })
+    } catch (e) {
+      res.status(500).send('Error scanning files')
+    }
+  })
+
+  // Get this machine's Tailscale IP and start listening
+  exec('tailscale status --json', (err, stdout) => {
+    if (err) {
+      console.error('Could not get Tailscale status. Is Tailscale running?', err)
+      return
+    }
+    const status = JSON.parse(stdout)
+    const myTsIp = status.Self?.TailscaleIPs?.[0]
+
+    if (myTsIp) {
+      appContext.listen(P2P_Port, myTsIp, () => {
+        console.log(`P2P Node listening on http://${myTsIp}:${P2P_Port}`)
+      })
+    }
+  })
 }
-
-// 2. The endpoint other peers will call to get this computer's files 
-appContext.get('/api/local-files', async (req, res) => {
-  //Scan local files (adjust directory as needed)
-  try {
-    const entries = await fg(['C:/Users/Public/**/*'],
-      { onlyFiles: true });
-    res.json({
-      computer: require('os').hostname(),
-      files: entries
-    });
-
-  }
-  catch (e) {
-    res.status(500).send("Error scanning");
-  }
-});
-
-//3. Start listening ONLY on the Tailscale network 
-const myTsIp = getMyTailscaleIP();
-if (myTsIp) {
-
-  appContext.listen(P2P_Port, myTsIp, () => {
-    console.log(`P2P Node listening on http://${myTsIp}:${P2P_Port}`);
-  });
-
-}
-
-
-
-
-
 
 function createWindow() {
   // Create the browser window.
@@ -99,13 +87,42 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // Start the P2P server
+  startP2PServer()
+
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // IPC handler for getting device status from the local Tailscale CLI
+  ipcMain.handle('get-tailscale-status', () => {
+    return new Promise((resolve, reject) => {
+      exec('tailscale status --json', (err, stdout) => {
+        if (err) {
+          return reject(err)
+        }
+        try {
+          const status = JSON.parse(stdout)
+          const self = {
+            hostname: status.Self.HostName,
+            online: true // The local device is always "online" to itself
+          }
+          const peers = Object.values(status.Peer).map((peer) => ({
+            hostname: peer.HostName,
+            online: peer.Online
+          }))
+          resolve([self, ...peers])
+        } catch (e) {
+          reject(e)
+        }
+      })
+    })
+  })
+
+  // IPC handler for getting device IPs from the Tailscale API
   ipcMain.handle('get-tailscale-devices', () => {
     return new Promise((resolve, reject) => {
       const tailnet = '-' // Use your tailnet name or '-' for default
-      const apiKey = "tskey-api-kMuqUf38td11CNTRL-Vio2AVU7QSY2aY6LKhMaSYNC655cZ42L";//ENTER KEY ;)
+      const apiKey = 'tskey-api-kMuqUf38td11CNTRL-Vio2AVU7QSY2aY6LKhMaSYNC655cZ42L' //ENTER KEY ;)
       const request = net.request({
         method: 'GET',
         protocol: 'https:',
@@ -122,16 +139,18 @@ app.whenReady().then(() => {
         })
         response.on('end', () => {
           try {
-            const data = JSON.parse(body);
+            const data = JSON.parse(body)
+            console.log('Tailscale API Response:', JSON.stringify(data, null, 2))
+
+            if (response.statusCode !== 200) {
+              reject(new Error(data.message || `Tailscale API Error: ${response.statusCode}`))
+              return
+            }
+
             // The Tailscale API returns an object with a 'devices' array, not a direct array
             if (data && data.devices && Array.isArray(data.devices)) {
-              const ipsOnly = data.devices.map(device => {
-                // Try getting the IPv4 address from the devices list
-                return device.addresses && device.addresses.length > 0 ? device.addresses[0] : null
-              }).filter(Boolean); // Filter out any null values just in case
-              resolve(ipsOnly);
+              resolve(data.devices)
             } else {
-              // Fallback if the data shape changes or is empty
               resolve([]);
             }
           } catch (e) {
@@ -161,15 +180,6 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-ipcMain.handle("get-devices", async () => {
-  return new Promise((resolve, reject) => {
-    exec("tailscale status --json", (err, stdout) => {
-      if (err) reject(err);
-      else resolve(stdout);
-    });
-  });
-});
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
-
