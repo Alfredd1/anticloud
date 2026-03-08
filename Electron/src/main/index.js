@@ -2,6 +2,55 @@ import { app, shell, BrowserWindow, ipcMain, net } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import express from "express"
+import { execSync } from "child_process"
+import fg from "fast-glob"
+
+const appContext = express()
+const P2P_Port = 3500;
+
+function getMyTailscaleIP() {
+  try {
+    const status = JSON.parse(execSync("tailscale status --json")).toString();
+    return status.Self.TailscaleIP[0] //Gets the IPv4 addresss
+  }
+  catch (e) {
+    console.error("Tailscale not running");
+    return null;
+  }
+}
+
+// 2. The endpoint other peers will call to get this computer's files 
+appContext.get('/api/local-files', async (req, res) => {
+  //Scan local files (adjust directory as needed)
+  try {
+    const entries = await fg(['C:/Users/Public/**/*'],
+      { onlyFiles: true });
+    res.json({
+      computer: require('os').hostname(),
+      files: entries
+    });
+
+  }
+  catch (e) {
+    res.status(500).send("Error scanning");
+  }
+});
+
+//3. Start listening ONLY on the Tailscale network 
+const myTsIp = getMyTailscaleIP();
+if (myTsIp) {
+
+  appContext.listen(P2P_Port, myTsIp, () => {
+    console.log(`P2P Node listening on http://${myTsIp}:${P2P_Port}`);
+  });
+
+}
+
+
+
+
+
 
 function createWindow() {
   // Create the browser window.
@@ -73,7 +122,18 @@ app.whenReady().then(() => {
         })
         response.on('end', () => {
           try {
-            resolve(JSON.parse(body))
+            const data = JSON.parse(body);
+            // The Tailscale API returns an object with a 'devices' array, not a direct array
+            if (data && data.devices && Array.isArray(data.devices)) {
+              const ipsOnly = data.devices.map(device => {
+                // Try getting the IPv4 address from the devices list
+                return device.addresses && device.addresses.length > 0 ? device.addresses[0] : null
+              }).filter(Boolean); // Filter out any null values just in case
+              resolve(ipsOnly);
+            } else {
+              // Fallback if the data shape changes or is empty
+              resolve([]);
+            }
           } catch (e) {
             reject(e)
           }
@@ -112,3 +172,4 @@ ipcMain.handle("get-devices", async () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
